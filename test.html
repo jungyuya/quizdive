@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>배포 테스트 — Deploy Test</title>
+  <meta name="description" content="배포/헬스체크용 데모 페이지 (디자인 적용)" />
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#9aa4b2; --accent:#7c3aed; --glass:rgba(255,255,255,0.04);
+      --radius:14px; --shadow: 0 6px 20px rgba(2,6,23,0.6);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(180deg, #071028 0%, #071022 60%);
+      color:#e6eef8; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+      padding:32px; display:flex; align-items:flex-start; justify-content:center;
+    }
+    .container{width:1100px; max-width:96%;}
+
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+    .brand{display:flex;gap:14px;align-items:center}
+    .logo{
+      width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#06b6d4);
+      display:flex;align-items:center;justify-content:center;font-weight:700;color:white;box-shadow:var(--shadow)
+    }
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    nav{display:flex;gap:10px}
+    .btn{border:0;padding:10px 14px;border-radius:10px;background:var(--glass);color:var(--accent);cursor:pointer;font-weight:600}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+
+    .grid{display:grid;grid-template-columns:1fr 380px;gap:20px}
+
+    /* main card */
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:20px;border-radius:var(--radius);box-shadow:var(--shadow)}
+    .hero{display:flex;align-items:center;gap:18px}
+    .hero .info h2{margin:0;font-size:18px}
+    .hero .info p{margin:6px 0 0;color:var(--muted);font-size:13px}
+
+    .features{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+    .feature{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;text-align:center}
+    .feature h3{margin:0;font-size:14px}
+    .feature p{margin:6px 0 0;color:var(--muted);font-size:12px}
+
+    /* right column */
+    .side{display:flex;flex-direction:column;gap:14px}
+    .status{display:flex;flex-direction:column;gap:8px}
+    .status .line{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02)}
+    .status .ok{color:#10b981;font-weight:700}
+    .status .bad{color:#f43f5e;font-weight:700}
+
+    .ping{display:flex;gap:8px}
+    .ping input{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    .ping button{padding:10px 12px;border-radius:10px;border:0;background:linear-gradient(90deg,var(--accent),#06b6d4);color:#04243a;font-weight:700}
+
+    .logs{height:160px;overflow:auto;padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(0,0,0,0.12), rgba(255,255,255,0.02));font-family:monospace;font-size:13px}
+
+    footer{margin-top:16px;color:var(--muted);font-size:12px;text-align:center}
+
+    /* responsive */
+    @media (max-width:980px){
+      .grid{grid-template-columns:1fr;}
+      .side{order:2}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo">DT</div>
+        <div>
+          <h1>Deploy Test — 배포 테스트 페이지</h1>
+          <p class="lead">배포 확인용으로 디자인을 적용한 단일 HTML 파일입니다. (헬스체크 · 로그 · 샘플 UI 포함)</p>
+        </div>
+      </div>
+      <nav>
+        <button class="btn" id="themeToggle">Light / Dark</button>
+        <button class="btn ghost" id="refreshUI">Refresh UI</button>
+      </nav>
+    </header>
+
+    <main class="grid">
+      <section>
+        <div class="card">
+          <div class="hero">
+            <div style="width:76px;height:76px;border-radius:12px;background:linear-gradient(180deg,#0b1220,#061024);display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 8px 30px rgba(2,6,23,0.6)">🚀</div>
+            <div class="info">
+              <h2>배포 테스트 환경</h2>
+              <p>실제 배포 후 외부 접근, API 응답, 정적 파일 제공 등을 빠르게 점검할 수 있습니다.</p>
+            </div>
+          </div>
+
+          <div style="margin-top:18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <div style="flex:1;min-width:220px">
+              <div style="padding:12px;border-radius:12px;background:linear-gradient(90deg, rgba(124,58,237,0.12), rgba(6,182,212,0.06));font-weight:700">서비스 상태: <span id="serviceState" class="ok">정상</span></div>
+            </div>
+            <div style="width:220px">
+              <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,0.02);font-size:13px">빌드 버전: <strong id="buildVersion">v1.0.0</strong></div>
+            </div>
+            <div style="width:160px">
+              <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,0.02);font-size:13px">환경: <strong id="env">production</strong></div>
+            </div>
+          </div>
+
+          <div class="features">
+            <div class="feature">
+              <h3>헬스 체크</h3>
+              <p>API 핑으로 응답 확인 가능</p>
+            </div>
+            <div class="feature">
+              <h3>로그 뷰</h3>
+              <p>간단한 런타임 로그 확인</p>
+            </div>
+            <div class="feature">
+              <h3>디자인</h3>
+              <p>반응형 + 모던 UI</p>
+            </div>
+          </div>
+
+          <div style="margin-top:18px" class="card">
+            <h3 style="margin:0 0 8px 0">샘플 폼 — 배포 테스트용</h3>
+            <form id="sampleForm" style="display:flex;gap:8px;flex-wrap:wrap">
+              <input name="name" placeholder="작성자 이름" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit" />
+              <input name="email" placeholder="email@domain.com" style="width:220px;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit" />
+              <button class="btn" style="min-width:140px" type="submit">샘플 제출</button>
+            </form>
+            <div id="formResult" style="margin-top:10px;color:var(--muted);font-size:13px">폼 제출 결과가 여기 표시됩니다.</div>
+          </div>
+
+        </div>
+      </section>
+
+      <aside class="side">
+        <div class="card status">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <strong>런타임 상태</strong>
+            <small style="color:var(--muted);font-size:12px">테스트 툴</small>
+          </div>
+          <div class="line"> <span>API /health</span> <span id="healthStatus" class="ok">200 OK</span></div>
+          <div class="line"> <span>DB 연결</span> <span id="dbStatus" class="ok">연결됨</span></div>
+          <div class="line"> <span>정적 파일</span> <span id="staticStatus" class="ok">제공중</span></div>
+
+          <div style="margin-top:12px">
+            <div style="font-size:13px;color:var(--muted);margin-bottom:6px">API 핑</div>
+            <div class="ping">
+              <input id="apiUrl" value="/api/health" />
+              <button id="pingBtn">PING</button>
+            </div>
+            <div style="margin-top:8px;font-size:13px;color:var(--muted)">결과: <span id="pingResult">대기중</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <strong>런타임 로그</strong>
+            <small style="color:var(--muted);font-size:12px">최근 20줄</small>
+          </div>
+          <div class="logs" id="logs">
+            <!-- 초기 더미 로그 -->
+            2026-02-06 10:00:00 - 서비스 시작\n
+          </div>
+        </div>
+
+        <div class="card" style="text-align:center">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:8px">환경 정보</div>
+          <div style="font-weight:700;margin-bottom:4px" id="ua">-</div>
+          <div style="font-size:12px;color:var(--muted)">네트워크: <span id="net">온라인</span></div>
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      배포 테스트 페이지 — 간단한 헬스 체크 및 UI 컴포넌트 모음
+    </footer>
+  </div>
+
+  <script>
+    // 간단한 동작: 폼 제출, 핑, 로그 추가
+    const logsEl = document.getElementById('logs');
+    function addLog(line){
+      const now = new Date().toISOString().replace('T',' ').replace('Z','');
+      logsEl.textContent = now + ' - ' + line + '\n' + logsEl.textContent;
+      // limit lines
+      const lines = logsEl.textContent.split('\n').slice(0,40);
+      logsEl.textContent = lines.join('\n');
+    }
+
+    document.getElementById('sampleForm').addEventListener('submit', e=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const name = fd.get('name') || 'anonymous';
+      addLog('폼 제출 — ' + name);
+      document.getElementById('formResult').textContent = `감사합니다, ${name}님 — 제출이 로컬에서 처리되었습니다.`;
+    });
+
+    document.getElementById('pingBtn').addEventListener('click', async ()=>{
+      const url = document.getElementById('apiUrl').value || '/api/health';
+      document.getElementById('pingResult').textContent = '요청중...';
+      try{
+        const t0 = performance.now();
+        const res = await fetch(url, {cache:'no-store'});
+        const t1 = Math.round(performance.now()-t0);
+        if(!res.ok) throw new Error(res.status + ' ' + res.statusText);
+        document.getElementById('pingResult').textContent = `${res.status} ${res.statusText} — ${t1}ms`;
+        document.getElementById('healthStatus').textContent = `${res.status} ${res.statusText}`;
+        document.getElementById('healthStatus').className = 'ok';
+        addLog(`PING ${url} → ${res.status} (${t1}ms)`);
+      }catch(err){
+        document.getElementById('pingResult').textContent = '실패: ' + err.message;
+        document.getElementById('healthStatus').textContent = 'Error';
+        document.getElementById('healthStatus').className = 'bad';
+        addLog(`PING ${url} → ERROR (${err.message})`);
+      }
+    });
+
+    // theme toggle (light/dark) — 단순 예시
+    const themeBtn = document.getElementById('themeToggle');
+    themeBtn.addEventListener('click', ()=>{
+      if(document.documentElement.style.getPropertyValue('--bg') === 'none'){
+        document.documentElement.style.removeProperty('--bg');
+      }
+      document.body.classList.toggle('light');
+      if(document.body.classList.contains('light')){
+        document.body.style.background = 'linear-gradient(180deg,#f7fbff,#eef6ff)';
+        document.body.style.color = '#082032';
+        document.documentElement.style.setProperty('--card','#ffffff');
+        document.documentElement.style.setProperty('--muted','#6b7280');
+        document.documentElement.style.setProperty('--glass','rgba(2,6,23,0.04)');
+      }else{
+        document.body.style.background = 'linear-gradient(180deg, #071028 0%, #071022 60%)';
+        document.body.style.color = '#e6eef8';
+        document.documentElement.style.setProperty('--card','#0b1220');
+        document.documentElement.style.setProperty('--muted','#9aa4b2');
+        document.documentElement.style.setProperty('--glass','rgba(255,255,255,0.04)');
+      }
+    });
+
+    document.getElementById('refreshUI').addEventListener('click', ()=>{ addLog('UI 강제 새로고침'); location.reload(); });
+
+    // 초기화
+    document.getElementById('ua').textContent = navigator.userAgent;
+    document.getElementById('net').textContent = navigator.onLine ? 'online' : 'offline';
+    addLog('UI 로드됨');
+
+    // 빌드버전, env는 서버 사이드에서 템플릿으로 치환하면 좋습니다.
+    // 예: replace placeholders with server-rendered values during deployment
+  </script>
+</body>
+</html>
