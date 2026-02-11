@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import vision from '@google-cloud/vision';
 import { downloadFromCOS } from '@/lib/cos';
 
-// GCP 인증 - JSON 문자열에서 파싱
+// GCP 인증 - Base64 디코딩 (EdgeOne Pages 500자 제한 우회)
+const gcpCredentialsBase64 = [
+    process.env.GCP_CREDENTIALS_PART1 || '',
+    process.env.GCP_CREDENTIALS_PART2 || '',
+    process.env.GCP_CREDENTIALS_PART3 || '',
+    process.env.GCP_CREDENTIALS_PART4 || ''
+].join('');
+
 const credentials = JSON.parse(
-    process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON!
+    Buffer.from(gcpCredentialsBase64, 'base64').toString('utf-8')
 );
 
 const visionClient = new vision.ImageAnnotatorClient({

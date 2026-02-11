@@ -57,6 +57,7 @@ lib-cov
 !.env.example
 *.pem
 gcp_key.json
+gcp_key.txt
 .vercel
 .serverless/
 .firebase/
