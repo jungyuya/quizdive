@@ -45,7 +45,7 @@ module "cos" {
     ServiceName = "QuizDive"
     Env         = "dev"
     Tool        = "Terraform"
-    TestTag     = "CICD-Verification"
+    TestTag     = "CI-CD-Verification"
   }
 }
 
@@ -58,7 +58,7 @@ module "cls" {
     ServiceName = "QuizDive"
     Env         = "dev"
     Tool        = "Terraform"
-    TestTag     = "CICD-Verification"
+    TestTag     = "CI-CD-Verification"
   }
 }
 
