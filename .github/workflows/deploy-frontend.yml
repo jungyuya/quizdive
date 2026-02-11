@@ -30,10 +30,7 @@ jobs:
           TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
           TENCENT_BUCKET: ${{ secrets.TENCENT_BUCKET }}
           TENCENT_REGION: ${{ secrets.TENCENT_REGION }}
-          GCP_CREDENTIALS_PART1: ${{ secrets.GCP_CREDENTIALS_PART1 }}
-          GCP_CREDENTIALS_PART2: ${{ secrets.GCP_CREDENTIALS_PART2 }}
-          GCP_CREDENTIALS_PART3: ${{ secrets.GCP_CREDENTIALS_PART3 }}
-          GCP_CREDENTIALS_PART4: ${{ secrets.GCP_CREDENTIALS_PART4 }}
+          GCP_VISION_API_KEY: ${{ secrets.GCP_VISION_API_KEY }}
           
       # EdgeOne CLI 배포는 복잡하므로 콘솔 연동 예정
       # 여기서는 빌드 성공 확인까지만 진행할 예정
