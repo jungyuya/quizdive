@@ -50,4 +50,4 @@ export const useQuizStore = create<QuizState>((set) => ({
       cards: [],
       error: null,
     }),
-}));
+})); 
