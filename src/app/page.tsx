@@ -8,7 +8,11 @@ import { ProcessingSteps } from '@/components/ProcessingSteps';
 import { FlashcardList } from '@/components/FlashcardList';
 import { Button } from '@/components/ui/button';
 import { saveCards } from '@/lib/db';
-import { v4 as uuidv4 } from 'uuid'; // npm install uuid
+import { v4 as uuidv4 } from 'uuid';
+import { HeroSection } from '@/components/HeroSection';
+import { useRef } from 'react';
+import { ErrorFeedback } from '@/components/ErrorFeedback';
+import { AnimatePresence } from 'framer-motion';
 
 export default function HomePage() {
   const {
@@ -98,53 +102,45 @@ export default function HomePage() {
     ]
   );
 
+  const uploadRef = useRef<HTMLDivElement>(null);
+
+  const scrollToUpload = () => {
+    uploadRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-8">
-      <div className="max-w-4xl mx-auto">
-        <motion.header
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-            QuizDive
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            사진 한 장으로 AI 플래시카드 만들기
-          </p>
-        </motion.header>
+    <main className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      {/* 히어로: 업로드 전 상태에서만 표시 */}
+      {step === 'upload' && <HeroSection onScrollToUpload={scrollToUpload} />}
+      <div ref={uploadRef} className="max-w-4xl mx-auto p-8">
 
-        {error && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mb-8 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-center"
-          >
-            {error}
-          </motion.div>
-        )}
+        <AnimatePresence mode="wait">
+          {error && (
+            <ErrorFeedback message={error} onRetry={reset} />
+          )}
 
-        {step === 'upload' && (
-          <ImageUploader onUpload={handleUpload} isUploading={false} />
-        )}
+          {step === 'upload' && (
+            <ImageUploader onUpload={handleUpload} isUploading={false} />
+          )}
 
-        {step === 'processing' && processingSubStep && (
-          <ProcessingSteps currentStep={processingSubStep} />
-        )}
+          {step === 'processing' && processingSubStep && (
+            <ProcessingSteps currentStep={processingSubStep} />
+          )}
 
-        {step === 'complete' && (
-          <div className="space-y-8">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold">
-                생성된 카드 ({cards.length}개)
-              </h2>
-              <Button onClick={reset} variant="outline">
-                새로 만들기
-              </Button>
+          {step === 'complete' && (
+            <div className="space-y-8">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-semibold">
+                  생성된 카드 ({cards.length}개)
+                </h2>
+                <Button onClick={reset} variant="outline">
+                  새로 만들기
+                </Button>
+              </div>
+              <FlashcardList cards={cards} />
             </div>
-            <FlashcardList cards={cards} />
-          </div>
-        )}
+          )}
+        </AnimatePresence>
       </div>
     </main>
   );

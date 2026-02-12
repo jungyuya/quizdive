@@ -19,10 +19,14 @@ export function ProcessingSteps({ currentStep }: ProcessingStepsProps) {
   const currentIndex = steps.findIndex((s) => s.id === currentStep);
 
   return (
+    // 로딩 상태 스크린리더 알림
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="w-full max-w-md mx-auto"
+      role="status"
+      aria-live="polite"
+      aria-label={`현재 단계: ${steps.find(s => s.id === currentStep)?.label}`}
     >
       <div className="space-y-4">
         {steps.map((step, index) => {
@@ -36,22 +40,20 @@ export function ProcessingSteps({ currentStep }: ProcessingStepsProps) {
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: index * 0.1 }}
-              className={`flex items-center gap-4 p-4 rounded-lg ${
-                isCurrent
-                  ? 'bg-primary/10 border border-primary/20'
-                  : isComplete
+              className={`flex items-center gap-4 p-4 rounded-lg ${isCurrent
+                ? 'bg-primary/10 border border-primary/20'
+                : isComplete
                   ? 'bg-green-50 dark:bg-green-900/20'
                   : 'bg-muted/50'
-              }`}
+                }`}
             >
               <div
-                className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                  isComplete
-                    ? 'bg-green-500 text-white'
-                    : isCurrent
+                className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${isComplete
+                  ? 'bg-green-500 text-white'
+                  : isCurrent
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted'
-                }`}
+                  }`}
               >
                 {isComplete ? (
                   <Check className="w-5 h-5" />
@@ -62,9 +64,12 @@ export function ProcessingSteps({ currentStep }: ProcessingStepsProps) {
                 )}
               </div>
               <span
-                className={`font-medium ${
-                  isCurrent ? 'text-primary' : isComplete ? 'text-green-600' : ''
-                }`}
+                className={`font-medium ${isCurrent
+                  ? 'text-primary'
+                  : isComplete
+                    ? 'text-green-600 dark:text-green-400'  // 다크모드에서 밝은 녹색
+                    : 'text-muted-foreground'
+                  }`}
               >
                 {step.label}
               </span>

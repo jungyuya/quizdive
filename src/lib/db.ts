@@ -21,7 +21,7 @@ function getDB() {
       upgrade(db) {
         const cardStore = db.createObjectStore('cards', { keyPath: 'id' });
         cardStore.createIndex('by-created', 'createdAt');
-        
+
         db.createObjectStore('decks', { keyPath: 'id' });
       },
     });
@@ -53,6 +53,13 @@ export async function deleteCard(id: string) {
   return db.delete('cards', id);
 }
 
+export async function deleteAllCards() {
+  const db = await getDB();
+  const tx = db.transaction('cards', 'readwrite');
+  await tx.store.clear();
+  await tx.done;
+}
+
 export async function updateCard(card: Flashcard) {
   const db = await getDB();
   return db.put('cards', card);
@@ -63,7 +70,7 @@ export async function updateCard(card: Flashcard) {
 export async function getCardsForReview(): Promise<Flashcard[]> {
   const cards = await getAllCards();
   const now = new Date();
-  
+
   return cards.filter((card) => {
     if (!card.nextReviewAt) return true;
     return new Date(card.nextReviewAt) <= now;

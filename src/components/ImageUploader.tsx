@@ -3,7 +3,8 @@
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion } from 'framer-motion';
-import { Upload, Image, Loader2 } from 'lucide-react';
+import { Upload, Image, Loader2, Camera } from 'lucide-react';
+import { useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 interface ImageUploaderProps {
@@ -13,6 +14,7 @@ interface ImageUploaderProps {
 
 export function ImageUploader({ onUpload, isUploading }: ImageUploaderProps) {
   const [preview, setPreview] = useState<string | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -35,6 +37,14 @@ export function ImageUploader({ onUpload, isUploading }: ImageUploaderProps) {
     disabled: isUploading,
   });
 
+  const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPreview(URL.createObjectURL(file));
+      onUpload(file);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -43,8 +53,9 @@ export function ImageUploader({ onUpload, isUploading }: ImageUploaderProps) {
     >
       <div
         {...getRootProps()}
+        aria-label="이미지 업로드 영역. 클릭하거나 파일을 끌어다 놓으세요."
         className={cn(
-          'relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200',
+          'relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
           isDragActive
             ? 'border-primary bg-primary/5'
             : 'border-muted-foreground/25 hover:border-primary/50',
@@ -86,6 +97,25 @@ export function ImageUploader({ onUpload, isUploading }: ImageUploaderProps) {
             </div>
           </div>
         )}
+      </div>
+      {/* 모바일 카메라 버튼 (md 이상에서 숨김) */}
+      <div className="md:hidden">
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleCameraCapture}
+          className="hidden"
+        />
+        <button
+          onClick={() => cameraInputRef.current?.click()}
+          disabled={isUploading}
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors text-muted-foreground hover:text-primary"
+        >
+          <Camera className="w-5 h-5" />
+          <span className="font-medium">카메라로 촬영</span>
+        </button>
       </div>
     </motion.div>
   );
