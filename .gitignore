@@ -53,6 +53,7 @@ lib-cov
 
 # --- Environment & Secrets ---
 .env
+.env.local
 .env.*
 !.env.example
 *.pem

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateFlashcards } from '@/lib/gemini';
+import { generateLogger } from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
+    const timer = generateLogger.startTimer();
+
     try {
         const { text } = await req.json();
 
@@ -17,14 +20,24 @@ export async function POST(req: NextRequest) {
 
         const result = await generateFlashcards(truncatedText);
 
+        const duration = generateLogger.endTimer(timer);
+        generateLogger.info('Generate completed', {
+            duration_ms: duration,
+            text_length: text.length,
+            cards_count: result.cards.length,
+            status: 'success',
+        });
+
         return NextResponse.json(result);
     } catch (error: any) {
-        console.error('Generate error details:', {
-            message: error.message,
+        const duration = generateLogger.endTimer(timer);
+        generateLogger.error('Generate failed', {
+            duration_ms: duration,
+            error: error.message,
             stack: error.stack,
-            // Gemini API 에러 객체 구조에 따라 다를 수 있음
-            response: error.response,
+            status: 'error',
         });
+
         return NextResponse.json(
             { error: `AI 생성에 실패했습니다: ${error.message}` },
             { status: 500 }
