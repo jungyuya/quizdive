@@ -13,6 +13,7 @@ import { saveCards } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { HeroSection } from '@/components/HeroSection';
 import { ErrorFeedback } from '@/components/ErrorFeedback';
+import { resizeImage, fileToBase64 } from '@/lib/image-utils';
 
 export default function HomePage() {
   const {
@@ -34,74 +35,87 @@ export default function HomePage() {
   const [originalFile, setOriginalFile] = useState<File | null>(null);
   const uploadRef = useRef<HTMLDivElement>(null);
 
-  const handleUpload = useCallback(
-    async (file: File) => {
-      try {
-        setStep('processing');
-        setError(null);
+  const handleUpload = useCallback(async (file: File) => {
+    try {
+      setStep('processing');
+      setError(null);
 
-        // 1단계: 업로드
-        setProcessingSubStep('uploading');
-        const uploadForm = new FormData();
-        uploadForm.append('file', file);
+      // 1단계: 업로드 (기존과 동일)
+      setProcessingSubStep('uploading');
+      const uploadForm = new FormData();
+      uploadForm.append('file', file);
+      const uploadRes = await fetch('/api/upload', { method: 'POST', body: uploadForm });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(uploadData.error);
+      setImageUrl(uploadData.imageUrl);
 
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: uploadForm,
-        });
-        const uploadData = await uploadRes.json();
-        if (!uploadRes.ok) throw new Error(uploadData.error);
-        setImageUrl(uploadData.imageUrl);
+      // 2단계: OCR (개선 — Base64 직접 전달)
+      setProcessingSubStep('ocr');
 
-        // 2단계: OCR
-        setProcessingSubStep('ocr');
-        const ocrRes = await fetch('/api/ocr', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: uploadData.imageUrl }),
-        });
-        const remaining = ocrRes.headers.get('X-RateLimit-Remaining');
-        if (remaining) {
-          console.log(`오늘 남은 스캔: ${remaining}회`);
-          // 선택: UI에 표시
-        }
-        const ocrData = await ocrRes.json();
-        if (!ocrRes.ok) throw new Error(ocrData.error);
-        setOcrText(ocrData.text);
+      const imageBase64 = await fileToBase64(file);  // ✅ 방안 D: File → Base64
 
-        // 3단계: AI 생성
-        setProcessingSubStep('generating');
-        const genRes = await fetch('/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: ocrData.text }),
-        });
-        const genData = await genRes.json();
-        if (!genRes.ok) throw new Error(genData.error);
+      const ocrRes = await fetch('/api/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageUrl: uploadData.imageUrl, // 하위 호환용 (fallback)
+          imageBase64,                    // ✅ 새로 추가: 직접 전달
+        }),
+      });
 
-        // 카드 생성 및 저장
-        const newCards = genData.cards.map(
-          (c: { question: string; answer: string }) => ({
-            id: uuidv4(),
-            question: c.question,
-            answer: c.answer,
-            createdAt: new Date(),
-            reviewCount: 0,
-          })
-        );
-
-        setCards(newCards);
-        await saveCards(newCards);
-
-        setStep('complete');
-        setProcessingSubStep(null);
-      } catch (err: any) {
-        console.error(err);
-        setError(err.message || '처리 중 오류가 발생했습니다');
-        setStep('upload');
-        setProcessingSubStep(null);
+      // 504 Gateway Timeout 처리
+      if (ocrRes.status === 504) {
+        throw new Error('이미지가 너무 크거나 처리가 지연되고 있습니다. (시간 초과)');
       }
-    },
+
+      const remaining = ocrRes.headers.get('X-RateLimit-Remaining');
+      if (remaining) {
+        console.log(`오늘 남은 스캔: ${remaining}회`);
+      }
+
+      let ocrData;
+      try {
+        ocrData = await ocrRes.json();
+      } catch (e) {
+        throw new Error(`서버 응답을 분석할 수 없습니다. (Status: ${ocrRes.status})`);
+      }
+
+      if (!ocrRes.ok) throw new Error(ocrData.error);
+      setOcrText(ocrData.text);
+
+      // 3단계: AI 생성
+      setProcessingSubStep('generating');
+      const genRes = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: ocrData.text }),
+      });
+      const genData = await genRes.json();
+      if (!genRes.ok) throw new Error(genData.error);
+
+      // 카드 생성 및 저장
+      const newCards = genData.cards.map(
+        (c: { question: string; answer: string }) => ({
+          id: uuidv4(),
+          question: c.question,
+          answer: c.answer,
+          createdAt: new Date(),
+          reviewCount: 0,
+        })
+      );
+
+      setCards(newCards);
+      await saveCards(newCards);
+
+      setStep('complete');
+      setProcessingSubStep(null);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || '처리 중 오류가 발생했습니다');
+      setStep('upload');
+      setProcessingSubStep(null);
+    }
+  },
     [setStep, setProcessingSubStep, setImageUrl, setOcrText, setCards, setError]
   );
 
@@ -124,7 +138,10 @@ export default function HomePage() {
 
   const handleCropSkip = async () => {
     setCropImage(null);
-    if (originalFile) await handleUpload(originalFile);
+    if (originalFile) {
+      const optimized = await resizeImage(originalFile);  // ✅ 방안 B: 리사이징
+      await handleUpload(optimized);
+    }
   };
 
   return (

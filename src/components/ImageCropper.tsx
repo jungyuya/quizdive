@@ -24,9 +24,26 @@ async function getCroppedImg(
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
 
-    canvas.width = pixelCrop.width * scaleX;
-    canvas.height = pixelCrop.height * scaleY;
+    // 최대 해상도 제한 (OCR 처리 속도 및 용량 최적화)
+    const MAX_DIMENSION = 1280;
+
+    let targetWidth = pixelCrop.width * scaleX;
+    let targetHeight = pixelCrop.height * scaleY;
+
+    // 비율 유지하며 리사이징
+    if (targetWidth > MAX_DIMENSION || targetHeight > MAX_DIMENSION) {
+        const ratio = Math.min(MAX_DIMENSION / targetWidth, MAX_DIMENSION / targetHeight);
+        targetWidth *= ratio;
+        targetHeight *= ratio;
+    }
+
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
     const ctx = canvas.getContext('2d')!;
+
+    // 이미지 품질 보정을 위한 스무딩 설정
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     ctx.drawImage(
         image,
@@ -35,8 +52,8 @@ async function getCroppedImg(
         pixelCrop.width * scaleX,
         pixelCrop.height * scaleY,
         0, 0,
-        canvas.width,
-        canvas.height
+        targetWidth,
+        targetHeight
     );
 
     return new Promise((resolve) => {

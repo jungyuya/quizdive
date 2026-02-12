@@ -1,8 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   reactCompiler: true,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '5mb',  // 리사이징된 이미지 Base64 전송 허용
+    },
+  },
 };
 
 export default nextConfig;

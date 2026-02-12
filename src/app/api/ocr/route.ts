@@ -26,34 +26,44 @@ export async function POST(req: NextRequest) {
     const timer = ocrLogger.startTimer();
 
     try {
-        const { imageUrl } = await req.json();
+        const { imageUrl, imageBase64 } = await req.json();
 
-        if (!imageUrl) {
-            return NextResponse.json({ error: '이미지 URL이 필요합니다' }, { status: 400 });
+        if (!imageUrl && !imageBase64) {
+            return NextResponse.json({ error: '이미지 URL 또는 Base64 데이터가 필요합니다' }, { status: 400 });
         }
 
         if (!GCP_VISION_API_KEY) {
             return NextResponse.json({ error: 'GCP Vision API Key가 설정되지 않았습니다' }, { status: 500 });
         }
 
-        // 2. URL에서 Key 추출 및 이미지 다운로드
-        const urlObj = new URL(imageUrl);
-        const key = urlObj.pathname.startsWith('/') ? urlObj.pathname.slice(1) : urlObj.pathname;
-        const imageBuffer = await downloadFromCOS(key);
+        // ✅ 방안 D: Base64가 있으면 COS 다운로드 생략
+        let base64Content: string;
 
-        // 3. GCP Vision API 호출
+        if (imageBase64) {
+            // 클라이언트에서 직접 받은 Base64 사용 → COS 다운로드 생략!
+            base64Content = imageBase64;
+            ocrLogger.info('Using direct Base64 (COS download skipped)');
+        } else {
+            // fallback: 기존 방식 (URL → COS 다운로드 → Base64 변환)
+            const urlObj = new URL(imageUrl);
+            const key = urlObj.pathname.startsWith('/') ? urlObj.pathname.slice(1) : urlObj.pathname;
+            const imageBuffer = await downloadFromCOS(key);
+            base64Content = imageBuffer.toString('base64');
+            ocrLogger.info('Using COS download fallback');
+        }
+
+        // ✅ 추가 개선: TEXT_DETECTION → DOCUMENT_TEXT_DETECTION
+        // DOCUMENT_TEXT_DETECTION은 밀집 텍스트(시험 문제, 문서 등)에 최적화
         const visionResponse = await fetch(
             `https://vision.googleapis.com/v1/images:annotate?key=${GCP_VISION_API_KEY}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    requests: [
-                        {
-                            image: { content: imageBuffer.toString('base64') },
-                            features: [{ type: 'TEXT_DETECTION' }],
-                        },
-                    ],
+                    requests: [{
+                        image: { content: base64Content },
+                        features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],  // ✅ 변경
+                    }],
                 }),
             }
         );

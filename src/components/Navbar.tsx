@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Camera, BookOpen, GraduationCap, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 const navItems = [
   { href: '/', label: '만들기', icon: Camera },
@@ -28,10 +29,16 @@ export function Navbar() {
       <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border/50">
         <nav className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
           {/* 로고 */}
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-              🧠 QuizDive
-            </span>
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/homelogo.png"
+              alt="QuizDive"
+              width={160}
+              height={40}
+              className="w-auto h-8 md:h-10 object-contain"
+              sizes="(max-width: 768px) 120px, 160px"
+              priority
+            />
           </Link>
 
           {/* 데스크톱 메뉴 */}
