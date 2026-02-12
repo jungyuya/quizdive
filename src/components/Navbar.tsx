@@ -31,13 +31,14 @@ export function Navbar() {
           {/* 로고 */}
           <Link href="/" className="flex items-center">
             <Image
-              src="/homelogo.png"
+              src="/homelogo.webp" // 좌측 상단 홈 로고 버튼
               alt="QuizDive"
-              width={160}
-              height={40}
-              className="w-auto h-8 md:h-10 object-contain"
-              sizes="(max-width: 768px) 120px, 160px"
+              width={200}
+              height={50}
+              className="w-auto h-9 md:h-12 object-contain"
+              sizes="(max-width: 768px) 140px, 200px"
               priority
+              unoptimized
             />
           </Link>
 

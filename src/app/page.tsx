@@ -162,7 +162,7 @@ export default function HomePage() {
       {/* 2. 히어로 섹션: 업로드 단계에서만 노출 */}
       {step === 'upload' && <HeroSection onScrollToUpload={scrollToUpload} />}
 
-      <div ref={uploadRef} className="max-w-4xl mx-auto p-8">
+      <div ref={uploadRef} className="max-w-4xl mx-auto pt-2 pb-8 px-8">
         <AnimatePresence mode="wait">
           {error && (
             <motion.div

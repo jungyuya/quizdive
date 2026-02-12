@@ -78,6 +78,7 @@ export async function generateFlashcards(text: string) {
 2. 질문은 구체적이고 명확하게
 3. 답변은 간결하지만 충분한 설명 포함
 4. 반드시 JSON 형식으로만 응답
+5. 영어 문서도 문제와 답변은 한글로 작성
 
 출력 형식:
 {

@@ -31,7 +31,7 @@ const pipeline = [
 
 export function HeroSection({ onScrollToUpload }: HeroSectionProps) {
     return (
-        <section className="relative py-16 md:py-24 overflow-hidden">
+        <section className="relative py-10 md:py-16 overflow-hidden">
             {/* 배경 그라데이션 */}
             <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
 
@@ -55,7 +55,7 @@ export function HeroSection({ onScrollToUpload }: HeroSectionProps) {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.1 }}
-                    className="text-lg text-muted-foreground mb-12"
+                    className="text-lg text-muted-foreground mb-8"
                 >
                     교과서, 노트, 프린트를 촬영하면 AI가 학습 카드를 자동 생성합니다
                 </motion.p>
@@ -65,7 +65,7 @@ export function HeroSection({ onScrollToUpload }: HeroSectionProps) {
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.2 }}
-                    className="flex flex-row items-center justify-center gap-2 md:gap-6 mb-12"
+                    className="flex flex-row items-center justify-center gap-2 md:gap-6 mb-8"
                 >
                     {pipeline.map((step, index) => {
                         const Icon = step.icon;
@@ -111,10 +111,19 @@ export function HeroSection({ onScrollToUpload }: HeroSectionProps) {
                     <Button
                         size="lg"
                         onClick={onScrollToUpload}
-                        className="gap-2 text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow"
+                        className="group relative gap-2 text-lg px-8 py-7 rounded-2xl
+                            bg-foreground text-background font-semibold tracking-wide
+                            hover:bg-foreground/90 transition-all duration-300
+                            shadow-[0_0_20px_-5px_rgba(0,0,0,0.3)] dark:shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)]
+                            hover:-translate-y-1 hover:shadow-[0_0_30px_-5px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_0_30px_-5px_rgba(255,255,255,0.4)]
+                            overflow-hidden"
                     >
-                        시작하기
-                        <ArrowDown className="w-5 h-5 animate-bounce" />
+                        <span className="relative z-10 flex items-center gap-2">
+                            시작하기
+                            <ArrowDown className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-300" />
+                        </span>
+                        {/* 은은한 광택 효과 */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
                     </Button>
                 </motion.div>
             </div>

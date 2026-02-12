@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Trash2 } from 'lucide-react';
 import type { Flashcard } from '@/types';
@@ -18,8 +18,7 @@ export function FlashcardItem({ card, onDelete }: FlashcardItemProps) {
         <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            whileTap={{ scale: 0.97 }}  // 터치 시 살짝 줄어드는 피드백
-            className="perspective-1000"
+            whileTap={{ scale: 0.98 }}
         >
             <div
                 onClick={() => setIsFlipped(!isFlipped)}
@@ -32,51 +31,74 @@ export function FlashcardItem({ card, onDelete }: FlashcardItemProps) {
                 role="button"
                 tabIndex={0}
                 aria-label={isFlipped ? `답변: ${card.answer}` : `질문: ${card.question}. 뒤집으려면 Enter를 누르세요`}
-                className="relative w-full h-48 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg"
-                style={{ transformStyle: 'preserve-3d' }}
+                className="w-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg"
             >
-                <motion.div
-                    animate={{ rotateY: isFlipped ? 180 : 0 }}
-                    transition={{ duration: 0.5 }}
-                    style={{ transformStyle: 'preserve-3d' }}
-                    className="w-full h-full"
-                >
-                    {/* 앞면 (질문) */}
-                    <Card
-                        className="absolute inset-0 p-4 md:p-6 flex items-center justify-center text-center overflow-hidden
-                            bg-gradient-to-br from-primary/5 to-primary/10
-                            dark:from-primary/10 dark:to-primary/20"
-                        style={{ backfaceVisibility: 'hidden' }}
-                    >
-                        {onDelete && (
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onDelete(card.id); }}
-                                className="absolute top-2 right-2 p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-muted-foreground hover:text-red-500 transition-colors"
-                                aria-label="카드 삭제"
+                <AnimatePresence mode="wait" initial={false}>
+                    {!isFlipped ? (
+                        /* 앞면 (질문) */
+                        <motion.div
+                            key="question"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <Card
+                                className="p-5 md:p-6 flex items-start gap-3
+                                    bg-gradient-to-br from-primary/5 to-primary/10
+                                    dark:from-primary/10 dark:to-primary/20"
                             >
-                                <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                        )}
-                        <div className="w-full max-h-full overflow-y-auto px-1">
-                            <p className="text-xs text-muted-foreground mb-2">질문</p>
-                            <p className="text-base md:text-lg font-medium break-words">{card.question}</p>
-                        </div>
-                    </Card>
-
-                    {/* 뒷면 (답변) */}
-                    <Card
-                        className="absolute inset-0 p-4 md:p-6 flex items-center justify-center text-center overflow-hidden
-                            bg-gradient-to-br from-green-50 to-green-100
-                            dark:from-green-900/20 dark:to-green-800/20"
-                        style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-                    >
-                        <div className="w-full max-h-full overflow-y-auto px-1">
-                            <p className="text-xs text-muted-foreground mb-2">답변</p>
-                            <p className="text-base md:text-lg break-words">{card.answer}</p>
-                        </div>
-                    </Card>
-                </motion.div>
+                                <span className="shrink-0 w-7 h-7 rounded-full bg-primary/20 text-primary text-sm font-bold flex items-center justify-center mt-0.5">
+                                    Q
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-base md:text-lg font-medium break-words leading-relaxed">
+                                        {card.question}
+                                    </p>
+                                </div>
+                                {onDelete && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onDelete(card.id); }}
+                                        className="shrink-0 p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-muted-foreground hover:text-red-500 transition-colors"
+                                        aria-label="카드 삭제"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </Card>
+                        </motion.div>
+                    ) : (
+                        /* 뒷면 (답변) */
+                        <motion.div
+                            key="answer"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <Card
+                                className="p-5 md:p-6 flex items-start gap-3
+                                    bg-gradient-to-br from-green-50 to-green-100
+                                    dark:from-green-900/20 dark:to-green-800/20"
+                            >
+                                <span className="shrink-0 w-7 h-7 rounded-full bg-green-500/20 text-green-600 dark:text-green-400 text-sm font-bold flex items-center justify-center mt-0.5">
+                                    A
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-base md:text-lg break-words leading-relaxed">
+                                        {card.answer}
+                                    </p>
+                                </div>
+                            </Card>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
+
+            {/* 클릭 힌트 */}
+            <p className="text-center text-xs text-muted-foreground/60 mt-1.5">
+                {isFlipped ? '클릭하여 질문 보기' : '클릭하여 답변 보기'}
+            </p>
         </motion.div>
     );
 }
