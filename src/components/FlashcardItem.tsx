@@ -3,16 +3,40 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/card';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Pencil } from 'lucide-react';
 import type { Flashcard } from '@/types';
 
 interface FlashcardItemProps {
     card: Flashcard;
     onDelete?: (id: string) => void;
+    onEdit?: (card: Flashcard) => void;
 }
 
-export function FlashcardItem({ card, onDelete }: FlashcardItemProps) {
+export function FlashcardItem({ card, onDelete, onEdit }: FlashcardItemProps) {
     const [isFlipped, setIsFlipped] = useState(false);
+
+    const actionButtons = (onDelete || onEdit) && (
+        <div className="shrink-0 flex items-center gap-0.5">
+            {onEdit && (
+                <button
+                    onClick={(e) => { e.stopPropagation(); onEdit(card); }}
+                    className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-muted-foreground hover:text-blue-500 transition-colors"
+                    aria-label="카드 편집"
+                >
+                    <Pencil className="w-3.5 h-3.5" />
+                </button>
+            )}
+            {onDelete && (
+                <button
+                    onClick={(e) => { e.stopPropagation(); onDelete(card.id); }}
+                    className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-muted-foreground hover:text-red-500 transition-colors"
+                    aria-label="카드 삭제"
+                >
+                    <Trash2 className="w-3.5 h-3.5" />
+                </button>
+            )}
+        </div>
+    );
 
     return (
         <motion.div
@@ -56,15 +80,7 @@ export function FlashcardItem({ card, onDelete }: FlashcardItemProps) {
                                         {card.question}
                                     </p>
                                 </div>
-                                {onDelete && (
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); onDelete(card.id); }}
-                                        className="shrink-0 p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-muted-foreground hover:text-red-500 transition-colors"
-                                        aria-label="카드 삭제"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                )}
+                                {actionButtons}
                             </Card>
                         </motion.div>
                     ) : (
@@ -89,6 +105,7 @@ export function FlashcardItem({ card, onDelete }: FlashcardItemProps) {
                                         {card.answer}
                                     </p>
                                 </div>
+                                {actionButtons}
                             </Card>
                         </motion.div>
                     )}

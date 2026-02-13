@@ -7,9 +7,10 @@ import type { Flashcard } from '@/types';
 interface FlashcardListProps {
   cards: Flashcard[];
   onDelete?: (id: string) => void;
+  onEdit?: (card: Flashcard) => void;
 }
 
-export function FlashcardList({ cards, onDelete }: FlashcardListProps) {
+export function FlashcardList({ cards, onDelete, onEdit }: FlashcardListProps) {
   if (cards.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
@@ -31,7 +32,7 @@ export function FlashcardList({ cards, onDelete }: FlashcardListProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
         >
-          <FlashcardItem card={card} onDelete={onDelete} />
+          <FlashcardItem card={card} onDelete={onDelete} onEdit={onEdit} />
         </motion.div>
       ))}
     </motion.div>

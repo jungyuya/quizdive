@@ -108,3 +108,4 @@ override.tf.json
 .dynamodb/
 *.md
 !README.md
+!Architecture.md

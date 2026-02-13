@@ -128,6 +128,8 @@ export default function HomePage() {
     // 기존 URL 메모리 해제 후 생성
     if (cropImage) URL.revokeObjectURL(cropImage);
     setCropImage(URL.createObjectURL(file));
+    // 모바일에서 크로퍼 영역이 보이도록 맨 위로 스크롤
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCropComplete = async (croppedBlob: Blob) => {

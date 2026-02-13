@@ -2,11 +2,15 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, BookOpen } from 'lucide-react';
+import { Trash2, BookOpen, Layers, List } from 'lucide-react';
 import { FlashcardList } from '@/components/FlashcardList';
+import { StudyListView } from '@/components/StudyListView';
+import { CardEditModal } from '@/components/CardEditModal';
 import { Button } from '@/components/ui/button';
-import { getAllCards, deleteCard, deleteAllCards } from '@/lib/db';
+import { getAllCards, deleteCard, deleteAllCards, updateCard } from '@/lib/db';
 import type { Flashcard } from '@/types';
+
+type ViewMode = 'card' | 'study';
 
 // 날짜별 그룹핑 헬퍼
 function groupByDate(cards: Flashcard[]): Record<string, Flashcard[]> {
@@ -35,6 +39,8 @@ function groupByDate(cards: Flashcard[]): Record<string, Flashcard[]> {
 export default function HistoryPage() {
     const [cards, setCards] = useState<Flashcard[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [editingCard, setEditingCard] = useState<Flashcard | null>(null);
+    const [viewMode, setViewMode] = useState<ViewMode>('card');
 
     const loadCards = useCallback(async () => {
         setIsLoading(true);
@@ -58,6 +64,16 @@ export default function HistoryPage() {
         setCards([]);
     };
 
+    const handleEdit = (card: Flashcard) => {
+        setEditingCard(card);
+    };
+
+    const handleSaveEdit = async (updated: Flashcard) => {
+        await updateCard(updated);
+        setCards((prev) => prev.map((c) => c.id === updated.id ? updated : c));
+        setEditingCard(null);
+    };
+
     const grouped = groupByDate(cards);
 
     return (
@@ -67,25 +83,53 @@ export default function HistoryPage() {
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex justify-between items-center mb-8"
+                    className="flex flex-col gap-4 mb-8"
                 >
-                    <div className="flex items-center gap-3">
-                        <BookOpen className="w-7 h-7 text-primary" />
-                        <h1 className="text-2xl font-bold">내 카드</h1>
-                        <span className="text-sm text-muted-foreground">
-                            ({cards.length}장)
-                        </span>
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <BookOpen className="w-7 h-7 text-primary" />
+                            <h1 className="text-2xl font-bold">내 카드</h1>
+                            <span className="text-sm text-muted-foreground">
+                                ({cards.length}장)
+                            </span>
+                        </div>
+                        {cards.length > 0 && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleDeleteAll}
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            >
+                                <Trash2 className="w-4 h-4 mr-1" />
+                                전체 삭제
+                            </Button>
+                        )}
                     </div>
+
+                    {/* 뷰 모드 토글 */}
                     {cards.length > 0 && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleDeleteAll}
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        >
-                            <Trash2 className="w-4 h-4 mr-1" />
-                            전체 삭제
-                        </Button>
+                        <div className="flex bg-muted/50 rounded-lg p-1 w-fit">
+                            <button
+                                onClick={() => setViewMode('card')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'card'
+                                        ? 'bg-background text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                            >
+                                <Layers className="w-4 h-4" />
+                                카드 뷰
+                            </button>
+                            <button
+                                onClick={() => setViewMode('study')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'study'
+                                        ? 'bg-background text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                            >
+                                <List className="w-4 h-4" />
+                                학습 뷰
+                            </button>
+                        </div>
                     )}
                 </motion.div>
 
@@ -131,11 +175,24 @@ export default function HistoryPage() {
                                     ({groupCards.length}장)
                                 </span>
                             </h2>
-                            <FlashcardList cards={groupCards} onDelete={handleDelete} />
+                            {viewMode === 'card' ? (
+                                <FlashcardList cards={groupCards} onDelete={handleDelete} onEdit={handleEdit} />
+                            ) : (
+                                <StudyListView cards={groupCards} onEdit={handleEdit} />
+                            )}
                         </motion.section>
                     ))}
                 </AnimatePresence>
             </div>
+
+            {/* 편집 모달 */}
+            {editingCard && (
+                <CardEditModal
+                    card={editingCard}
+                    onSave={handleSaveEdit}
+                    onClose={() => setEditingCard(null)}
+                />
+            )}
         </main>
     );
 }
