@@ -1,14 +1,16 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, BookOpen, Layers, List } from 'lucide-react';
 import { FlashcardList } from '@/components/FlashcardList';
 import { StudyListView } from '@/components/StudyListView';
 import { CardEditModal } from '@/components/CardEditModal';
 import { Button } from '@/components/ui/button';
-import { getAllCards, deleteCard, deleteAllCards, updateCard } from '@/lib/db';
 import type { Flashcard } from '@/types';
+import { useAuth } from '@/components/AuthProvider';
+import { createCardService } from '@/lib/card-service';
+
 
 type ViewMode = 'card' | 'study';
 
@@ -41,27 +43,38 @@ export default function HistoryPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [editingCard, setEditingCard] = useState<Flashcard | null>(null);
     const [viewMode, setViewMode] = useState<ViewMode>('card');
+    const { user } = useAuth();
+    const cardService = useMemo(() => createCardService(user), [user]);
 
-    const loadCards = useCallback(async () => {
-        setIsLoading(true);
-        const allCards = await getAllCards();
-        setCards(allCards);
-        setIsLoading(false);
-    }, []);
-
+    // 카드 로드: cardService.getAll()이 로그인 시 Supabase, 비로그인 시 IndexedDB 자동 분기
     useEffect(() => {
+        async function loadCards() {
+            setIsLoading(true);
+            try {
+                const allCards = await cardService.getAll();
+                setCards(allCards);
+            } catch (error) {
+                console.error('카드 로드 실패:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
         loadCards();
-    }, [loadCards]);
-
+    }, [cardService]);
     const handleDelete = async (id: string) => {
-        await deleteCard(id);
+        await cardService.remove(id);
         setCards((prev) => prev.filter((c) => c.id !== id));
     };
 
     const handleDeleteAll = async () => {
         if (!window.confirm('모든 카드를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-        await deleteAllCards();
-        setCards([]);
+        try {
+            await cardService.removeAll();
+            setCards([]);
+        } catch (error: any) {
+            console.error('전체 삭제 실패:', error);
+            alert(`삭제 중 오류가 발생했습니다: ${error.message || error}`);
+        }
     };
 
     const handleEdit = (card: Flashcard) => {
@@ -69,12 +82,14 @@ export default function HistoryPage() {
     };
 
     const handleSaveEdit = async (updated: Flashcard) => {
-        await updateCard(updated);
+        await cardService.update(updated);
         setCards((prev) => prev.map((c) => c.id === updated.id ? updated : c));
         setEditingCard(null);
     };
 
     const grouped = groupByDate(cards);
+
+
 
     return (
         <main className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-8">
@@ -112,8 +127,8 @@ export default function HistoryPage() {
                             <button
                                 onClick={() => setViewMode('card')}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'card'
-                                        ? 'bg-background text-foreground shadow-sm'
-                                        : 'text-muted-foreground hover:text-foreground'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
                                     }`}
                             >
                                 <Layers className="w-4 h-4" />
@@ -122,8 +137,8 @@ export default function HistoryPage() {
                             <button
                                 onClick={() => setViewMode('study')}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'study'
-                                        ? 'bg-background text-foreground shadow-sm'
-                                        : 'text-muted-foreground hover:text-foreground'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
                                     }`}
                             >
                                 <List className="w-4 h-4" />

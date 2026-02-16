@@ -1,7 +1,7 @@
 'use client';
 
 // 1. useState 임포트 추가 및 useRef, useCallback 통합
-import { useCallback, useState, useRef, useEffect } from 'react';
+import { useCallback, useState, useRef, useEffect, useMemo } from 'react';
 import { ImageCropper } from '@/components/ImageCropper';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuizStore } from '@/store/useQuizStore';
@@ -9,11 +9,15 @@ import { ImageUploader } from '@/components/ImageUploader';
 import { ProcessingSteps } from '@/components/ProcessingSteps';
 import { FlashcardList } from '@/components/FlashcardList';
 import { Button } from '@/components/ui/button';
-import { saveCards } from '@/lib/db';
+// saveCards는 card-service를 통해 호출
 import { v4 as uuidv4 } from 'uuid';
 import { HeroSection } from '@/components/HeroSection';
 import { ErrorFeedback } from '@/components/ErrorFeedback';
 import { resizeImage, fileToBase64 } from '@/lib/image-utils';
+import { useAuth } from '@/components/AuthProvider';
+import { getAllDecks, getDeckWithCards } from '@/lib/supabase/decks';
+import type { Deck, Flashcard } from '@/types';
+import { createCardService } from '@/lib/card-service';
 
 export default function HomePage() {
   const {
@@ -34,6 +38,10 @@ export default function HomePage() {
   const [cropImage, setCropImage] = useState<string | null>(null);
   const [originalFile, setOriginalFile] = useState<File | null>(null);
   const uploadRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const cardService = useMemo(() => createCardService(user), [user]);
+  const [decks, setDecks] = useState<Deck[]>([]);
+  const [selectedDeckId, setSelectedDeckId] = useState<string>('all');
 
   const handleUpload = useCallback(async (file: File) => {
     try {
@@ -105,7 +113,7 @@ export default function HomePage() {
       );
 
       setCards(newCards);
-      await saveCards(newCards);
+      await cardService.save(newCards);
 
       setStep('complete');
       setProcessingSubStep(null);
@@ -116,7 +124,7 @@ export default function HomePage() {
       setProcessingSubStep(null);
     }
   },
-    [setStep, setProcessingSubStep, setImageUrl, setOcrText, setCards, setError]
+    [setStep, setProcessingSubStep, setImageUrl, setOcrText, setCards, setError, cardService]
   );
 
   const scrollToUpload = () => {

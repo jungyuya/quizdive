@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Trash2, Pencil } from 'lucide-react';
 import type { Flashcard } from '@/types';
+import { AddToDeckButton } from '@/components/AddToDeckButton';
 
 interface FlashcardItemProps {
     card: Flashcard;
@@ -35,6 +36,7 @@ export function FlashcardItem({ card, onDelete, onEdit }: FlashcardItemProps) {
                     <Trash2 className="w-3.5 h-3.5" />
                 </button>
             )}
+            <AddToDeckButton cardId={card.id} />
         </div>
     );
 

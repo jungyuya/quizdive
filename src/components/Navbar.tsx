@@ -1,27 +1,59 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/components/AuthProvider';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { Camera, BookOpen, GraduationCap, Moon, Sun } from 'lucide-react';
+import { FolderOpen } from 'lucide-react'; // import 추가
+import { useMemo } from 'react'; // import 추가
+import { motion, AnimatePresence } from 'framer-motion';
+import { Camera, BookOpen, GraduationCap, Moon, Sun, LogOut } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
-const navItems = [
-  { href: '/', label: '만들기', icon: Camera },
-  { href: '/history', label: '내 카드', icon: BookOpen },
-  { href: '/review', label: '복습', icon: GraduationCap },
-];
+
 
 export function Navbar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const { user, loading, signInWithGoogle, signOut } = useAuth();
+
+  const navItems = useMemo(() => {
+    const base = [
+      { href: '/', label: '만들기', icon: Camera },
+      { href: '/history', label: '내 카드', icon: BookOpen },
+    ];
+
+    // 로그인 상태에서만 모음집 탭 표시
+    if (user) {
+      base.push({ href: '/collections', label: '모음집', icon: FolderOpen });
+    }
+
+    base.push({ href: '/review', label: '복습', icon: GraduationCap });
+    return base;
+  }, [user]);
 
   // hydration 불일치 방지
-  useState(() => { setMounted(true); });
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // 프로필 메뉴 외부 클릭 감지
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    }
+    if (showProfileMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showProfileMenu]);
 
   return (
     <>
@@ -31,7 +63,7 @@ export function Navbar() {
           {/* 로고 */}
           <Link href="/" className="flex items-center">
             <Image
-              src="/homelogo.webp" // 좌측 상단 홈 로고 버튼
+              src="/homelogo.webp"
               alt="QuizDive"
               width={200}
               height={50}
@@ -65,20 +97,81 @@ export function Navbar() {
             })}
           </div>
 
-          {/* 다크모드 토글 */}
-          {mounted && (
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-lg hover:bg-muted transition-colors"
-              aria-label="테마 전환"
-            >
-              {theme === 'dark' ? (
-                <Sun className="w-5 h-5" />
+          {/* 우측 영역: 다크모드 + 로그인 */}
+          <div className="flex items-center gap-2">
+            {/* 다크모드 토글 */}
+            {mounted && (
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="p-2 rounded-lg hover:bg-muted transition-colors"
+                aria-label="테마 전환"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="w-5 h-5" />
+                ) : (
+                  <Moon className="w-5 h-5" />
+                )}
+              </button>
+            )}
+
+            {/* 로그인/프로필 */}
+            {!loading && (
+              user ? (
+                <div className="relative" ref={profileMenuRef}>
+                  <button
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt="프로필"
+                      className="w-7 h-7 rounded-full"
+                    />
+                    <span className="text-sm hidden lg:inline">
+                      {user.user_metadata.name}
+                    </span>
+                  </button>
+
+                  {/* 드롭다운 메뉴 */}
+                  <AnimatePresence>
+                    {showProfileMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-background shadow-lg overflow-hidden z-50"
+                      >
+                        <div className="px-4 py-3 border-b border-border">
+                          <p className="text-sm font-medium">{user.user_metadata.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                        </div>
+                        <div className="p-1">
+                          <button
+                            onClick={() => {
+                              setShowProfileMenu(false);
+                              signOut();
+                            }}
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            로그아웃
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               ) : (
-                <Moon className="w-5 h-5" />
-              )}
-            </button>
-          )}
+                <button
+                  onClick={signInWithGoogle}
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
+                >
+                  Google로 로그인
+                </button>
+              )
+            )}
+          </div>
         </nav>
       </header>
 
@@ -93,7 +186,7 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors min-w-[64px]',
+                  'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors min-w-[64px] relative',
                   isActive
                     ? 'text-primary'
                     : 'text-muted-foreground'
