@@ -10,24 +10,38 @@ function CallbackContent() {
     const searchParams = useSearchParams();
     const [error, setError] = useState<string | null>(null);
 
+    // 컴포넌트 마운트 시 한 번만 클라이언트 생성 (인스턴스 재생성 방지)
+    const [supabase] = useState(() => createClient());
+
     useEffect(() => {
         const code = searchParams.get('code');
         const next = searchParams.get('next') ?? '/';
 
         if (code) {
-            const supabase = createClient();
-            supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-                if (!error) {
+            // 이미 세션이 있는지 먼저 확인 (중복 교환 및 경쟁 상태 방지)
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (session) {
                     router.push(next);
-                } else {
-                    setError(error.message);
-                    setTimeout(() => router.push('/'), 3000);
+                    return;
                 }
+
+                // 세션 없으면 코드 교환 시도
+                supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+                    if (!error) {
+                        router.push(next);
+                    } else {
+                        console.error('Auth Error:', error);
+                        // PKCE 에러인 경우에도 홈으로 보내서 재시도 유도
+                        // (이미 로그인된 상태일 수도 있으므로)
+                        setError(error.message);
+                        setTimeout(() => router.replace('/'), 2000);
+                    }
+                });
             });
         } else {
-            router.push('/');
+            router.replace('/');
         }
-    }, [searchParams, router]);
+    }, [searchParams, router, supabase]);
 
     if (error) {
         return (
