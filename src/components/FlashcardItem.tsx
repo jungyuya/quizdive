@@ -17,7 +17,7 @@ export function FlashcardItem({ card, onDelete, onEdit }: FlashcardItemProps) {
     const [isFlipped, setIsFlipped] = useState(false);
 
     const actionButtons = (onDelete || onEdit) && (
-        <div className="shrink-0 flex items-center gap-0.5">
+        <div className="absolute top-3 right-3 flex items-center gap-0.5 z-10">
             {onEdit && (
                 <button
                     onClick={(e) => { e.stopPropagation(); onEdit(card); }}
@@ -70,19 +70,19 @@ export function FlashcardItem({ card, onDelete, onEdit }: FlashcardItemProps) {
                             transition={{ duration: 0.2 }}
                         >
                             <Card
-                                className="p-5 md:p-6 flex items-start gap-3
+                                className="relative p-5 md:p-6 flex items-start gap-3
                                     bg-gradient-to-br from-primary/5 to-primary/10
                                     dark:from-primary/10 dark:to-primary/20"
                             >
+                                {actionButtons}
                                 <span className="shrink-0 w-7 h-7 rounded-full bg-primary/20 text-primary text-sm font-bold flex items-center justify-center mt-0.5">
                                     Q
                                 </span>
-                                <div className="flex-1 min-w-0">
+                                <div className="flex-1 min-w-0 pr-20">
                                     <p className="text-base md:text-lg font-medium break-words leading-relaxed">
                                         {card.question}
                                     </p>
                                 </div>
-                                {actionButtons}
                             </Card>
                         </motion.div>
                     ) : (
@@ -95,19 +95,19 @@ export function FlashcardItem({ card, onDelete, onEdit }: FlashcardItemProps) {
                             transition={{ duration: 0.2 }}
                         >
                             <Card
-                                className="p-5 md:p-6 flex items-start gap-3
+                                className="relative p-5 md:p-6 flex items-start gap-3
                                     bg-gradient-to-br from-green-50 to-green-100
                                     dark:from-green-900/20 dark:to-green-800/20"
                             >
+                                {actionButtons}
                                 <span className="shrink-0 w-7 h-7 rounded-full bg-green-500/20 text-green-600 dark:text-green-400 text-sm font-bold flex items-center justify-center mt-0.5">
                                     A
                                 </span>
-                                <div className="flex-1 min-w-0">
+                                <div className="flex-1 min-w-0 pr-20">
                                     <p className="text-base md:text-lg break-words leading-relaxed">
                                         {card.answer}
                                     </p>
                                 </div>
-                                {actionButtons}
                             </Card>
                         </motion.div>
                     )}

@@ -5,9 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FolderOpen, Plus, Trash2, ChevronRight, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateDeckModal } from '@/components/CreateDeckModal';
+import { CardEditModal } from '@/components/CardEditModal';
 import { FlashcardList } from '@/components/FlashcardList';
 import { useAuth } from '@/components/AuthProvider';
-import { createDeck, getAllDecks, getDeckWithCards, deleteDeck } from '@/lib/supabase/decks';
+import { createDeck, getAllDecks, getDeckWithCards, deleteDeck, removeCardFromDeck } from '@/lib/supabase/decks';
+import { updateCardRemote } from '@/lib/supabase/cards';
+import { toast } from 'sonner';
 import type { Deck, Flashcard } from '@/types';
 
 export default function CollectionsPage() {
@@ -17,6 +20,7 @@ export default function CollectionsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
   const [deckCards, setDeckCards] = useState<Flashcard[]>([]);
+  const [editingCard, setEditingCard] = useState<Flashcard | null>(null);
 
   const loadDecks = useCallback(async () => {
     if (!user) return;
@@ -68,6 +72,31 @@ export default function CollectionsPage() {
       setDeckCards(cards);
     } catch (error) {
       console.error('모음집 카드 로드 실패:', error);
+    }
+  };
+
+  // 모음집에서 카드 제거
+  const handleDeleteFromDeck = async (cardId: string) => {
+    if (!selectedDeck) return;
+    if (!window.confirm('이 카드를 모음집에서 제거하시겠습니까?')) return;
+    try {
+      await removeCardFromDeck(selectedDeck.id, cardId);
+      setDeckCards((prev) => prev.filter((c) => c.id !== cardId));
+      toast.success('모음집에서 제거되었습니다');
+    } catch {
+      toast.error('제거에 실패했습니다');
+    }
+  };
+
+  // 카드 편집 저장
+  const handleSaveEdit = async (updated: Flashcard) => {
+    try {
+      await updateCardRemote(updated);
+      setDeckCards((prev) => prev.map((c) => c.id === updated.id ? updated : c));
+      setEditingCard(null);
+      toast.success('카드가 수정되었습니다');
+    } catch {
+      toast.error('수정에 실패했습니다');
     }
   };
 
@@ -137,7 +166,11 @@ export default function CollectionsPage() {
                 이 모음집에 카드가 없습니다. "내 카드"에서 카드를 추가해 보세요.
               </div>
             ) : (
-              <FlashcardList cards={deckCards} />
+              <FlashcardList
+                cards={deckCards}
+                onDelete={handleDeleteFromDeck}
+                onEdit={(card) => setEditingCard(card)}
+              />
             )}
           </AnimatePresence>
         )}
@@ -204,6 +237,15 @@ export default function CollectionsPage() {
         <CreateDeckModal
           onSave={handleCreateDeck}
           onClose={() => setShowCreateModal(false)}
+        />
+      )}
+
+      {/* 카드 편집 모달 */}
+      {editingCard && (
+        <CardEditModal
+          card={editingCard}
+          onSave={handleSaveEdit}
+          onClose={() => setEditingCard(null)}
         />
       )}
     </main>
