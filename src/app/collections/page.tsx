@@ -219,7 +219,7 @@ export default function CollectionsPage() {
                     </div>
                     <div className="flex justify-between items-center mt-4 text-xs text-muted-foreground">
                       <span>{new Date(deck.createdAt).toLocaleDateString('ko-KR')}</span>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <div className="flex items-center gap-1">
                         {/* 공유 토글 버튼 */}
                         <button
                           onClick={async (e) => {
@@ -241,8 +241,8 @@ export default function CollectionsPage() {
                             }
                           }}
                           className={`p-1 rounded transition-all ${copiedDeckId === deck.id
-                              ? 'text-emerald-500 bg-emerald-500/10'
-                              : 'hover:bg-primary/10 hover:text-primary'
+                            ? 'text-emerald-500 bg-emerald-500/10'
+                            : 'hover:bg-primary/10 hover:text-primary'
                             }`}
                         >
                           {copiedDeckId === deck.id ? (

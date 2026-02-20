@@ -31,11 +31,11 @@ async function readTextFile(file: File): Promise<string> {
 // PDF 텍스트 추출 (텍스트 기반 PDF만 지원)
 async function readPdfFile(file: File): Promise<string> {
   const pdfjs = await import('pdfjs-dist');
-  // Worker 설정 (번들 최적화를 위해 동적 임포트)
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url
-  ).toString();
+
+  // Worker 설정: CDN에서 로드 (EdgeOne 정적 파일 서빙 문제 우회)
+  // pdfjs-dist 버전과 일치하는 CDN URL 사용
+  const PDFJS_VERSION = '5.4.624';
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`;
 
   const buffer = await file.arrayBuffer();
   const pdf = await pdfjs.getDocument({ data: buffer }).promise;
