@@ -3,6 +3,7 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/components/AuthProvider';
+import { Toaster } from '@/components/ui/sonner';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -45,6 +46,7 @@ export default function RootLayout({
               <Footer />
             </div>
           </AuthProvider>
+          <Toaster richColors position="top-center" />
         </ThemeProvider>
       </body>
     </html>

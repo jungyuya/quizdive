@@ -6,6 +6,7 @@ export interface Flashcard {
   lastReviewedAt?: Date;
   reviewCount: number;
   nextReviewAt?: Date;
+  source?: 'ocr' | 'manual' | 'file'; // 카드 생성 출처
 }
 
 export interface Deck {

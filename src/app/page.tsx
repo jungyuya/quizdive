@@ -6,6 +6,11 @@ import { ImageCropper } from '@/components/ImageCropper';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuizStore } from '@/store/useQuizStore';
 import { ImageUploader } from '@/components/ImageUploader';
+import { ManualCardForm } from '@/components/ManualCardForm';
+import { FileUploader } from '@/components/FileUploader';
+import { parseFile } from '@/lib/file-parser';
+import { chunkText } from '@/lib/text-chunker';
+import { toast } from 'sonner';
 import { ProcessingSteps } from '@/components/ProcessingSteps';
 import { FlashcardList } from '@/components/FlashcardList';
 import { Button } from '@/components/ui/button';
@@ -18,6 +23,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { getAllDecks, getDeckWithCards } from '@/lib/supabase/decks';
 import type { Deck, Flashcard } from '@/types';
 import { createCardService } from '@/lib/card-service';
+import { getUserRole, getMaxChunks } from '@/lib/supabase/profiles';
 
 export default function HomePage() {
   const {
@@ -40,6 +46,9 @@ export default function HomePage() {
   const uploadRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const cardService = useMemo(() => createCardService(user), [user]);
+  const [inputMode, setInputMode] = useState<'image' | 'manual' | 'file'>('image');
+  const [chunkProgress, setChunkProgress] = useState<{ current: number; total: number } | undefined>(undefined);
+
   const [decks, setDecks] = useState<Deck[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState<string>('all');
 
@@ -154,6 +163,97 @@ export default function HomePage() {
     }
   };
 
+  // ✅ Step 1.2: 수동 카드 저장 핸들러 — 기존 uuidv4, cardService 재사용
+  const handleManualSubmit = async (question: string, answer: string) => {
+    const card: Flashcard = {
+      id: uuidv4(),
+      question,
+      answer,
+      createdAt: new Date(),
+      reviewCount: 0,
+      source: 'manual',
+    };
+    await cardService.save([card]);
+  };
+
+  const handleFileSelect = async (file: File) => {
+    try {
+      setStep('processing');
+      setProcessingSubStep('uploading');
+      setError(null);
+      setChunkProgress(undefined);
+
+      // Step 3.11.3: 비로그인 체크
+      if (!user) {
+        toast.info('파일 업로드는 로그인 후 이용 가능합니다.');
+        setStep('upload');
+        return;
+      }
+
+      // Step 3.11.3: 사용자 role 조회 → 최대 청크 수 결정
+      const role = await getUserRole();
+      const maxChunks = getMaxChunks(role);
+
+      // 1. 파일 파싱 (클라이언트)
+      const text = await parseFile(file);
+
+      // 2. 청킹 (클라이언트)
+      let chunks = chunkText(text);
+
+      // 대용량 파일 제한: role별 최대 청크 수 적용
+      if (chunks.length > maxChunks) {
+        toast.info(
+          `현재 등급에서는 최대 ${maxChunks}개 구간까지 처리 가능합니다. (${chunks.length}→${maxChunks})`
+        );
+        chunks = chunks.slice(0, maxChunks);
+      }
+
+      setProcessingSubStep('generating');
+      setChunkProgress({ current: 0, total: chunks.length });
+
+      // 3. 각 청크를 순차적으로 Gemini에 전달 (중간 결과 누적 표시)
+      const allCards: Flashcard[] = [];
+      for (let i = 0; i < chunks.length; i++) {
+        setChunkProgress({ current: i + 1, total: chunks.length });
+
+        const genRes = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: chunks[i] }),
+        });
+        const genData = await genRes.json();
+        if (!genRes.ok) throw new Error(genData.error);
+
+        const newCards = genData.cards.map(
+          (c: { question: string; answer: string }) => ({
+            id: uuidv4(),
+            question: c.question,
+            answer: c.answer,
+            createdAt: new Date(),
+            reviewCount: 0,
+            source: 'file' as const,
+          })
+        );
+        allCards.push(...newCards);
+        // 중간 결과를 즉시 반영하여 사용자가 진행 상황 확인 가능
+        setCards([...allCards]);
+      }
+
+      await cardService.save(allCards);
+      setStep('complete');
+      setProcessingSubStep(null);
+      setChunkProgress(undefined);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || '파일 처리 중 오류가 발생했습니다');
+      setError(err.message || '파일 처리 중 오류가 발생했습니다');
+      setStep('upload');
+      setProcessingSubStep(null);
+      setChunkProgress(undefined);
+    }
+  };
+
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       {/* 1. 이미지 크로퍼 모달 (최상단) */}
@@ -193,7 +293,77 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <ImageUploader onUpload={handleImageSelect} isUploading={false} />
+              {/* ✅ Step 1.2: 입력 모드 전환 — 세그먼트 컨트롤 */}
+              <div className="flex justify-center mb-6">
+                <div className="inline-flex items-center p-1 rounded-xl bg-muted gap-1">
+                  <button
+                    onClick={() => setInputMode('image')}
+                    className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${inputMode === 'image'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                  >
+                    <span>📸</span>
+                    <span>이미지로 생성</span>
+                  </button>
+                  <button
+                    onClick={() => setInputMode('manual')}
+                    className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${inputMode === 'manual'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                  >
+                    <span>✏️</span>
+                    <span>직접 생성</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!user) {
+                        toast.info('📄 파일 업로드는 로그인 후 이용 가능합니다.');
+                        return;
+                      }
+                      setInputMode('file');
+                    }}
+                    className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${inputMode === 'file'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                  >
+                    <span>📄</span>
+                    <span>파일로 생성</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ✅ Step 1.2: 모드에 따라 컴포넌트 분기 */}
+              <AnimatePresence mode="wait">
+                {inputMode === 'image' ? (
+                  <motion.div
+                    key="image-uploader"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <ImageUploader onUpload={handleImageSelect} isUploading={false} />
+                  </motion.div>
+                ) : inputMode === 'manual' ? (
+                  <motion.div
+                    key="manual-form"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <ManualCardForm
+                      onSubmit={handleManualSubmit}
+                      onClose={() => setInputMode('image')}
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.div key="file-uploader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <FileUploader onFileSelect={handleFileSelect} isProcessing={false} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
 
@@ -205,7 +375,11 @@ export default function HomePage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <ProcessingSteps currentStep={processingSubStep} />
+              <ProcessingSteps
+                currentStep={processingSubStep}
+                mode={inputMode === 'file' ? 'file' : 'image'}
+                chunkProgress={chunkProgress}
+              />
             </motion.div>
           )}
 

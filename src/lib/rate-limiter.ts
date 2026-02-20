@@ -42,3 +42,32 @@ export function getClientIP(req: Request): string {
     if (real) return real;
     return '127.0.0.1';
 }
+
+// Step 3.11.5: /api/generate 전용 Rate Limiter
+const generateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const GENERATE_DAILY_LIMIT = 30;
+
+export function checkGenerateLimit(ip: string): {
+    allowed: boolean;
+    remaining: number;
+    resetAt: Date;
+} {
+    const now = Date.now();
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    const resetAt = todayEnd.getTime();
+
+    const entry = generateLimitMap.get(ip);
+
+    if (!entry || now > entry.resetAt) {
+        generateLimitMap.set(ip, { count: 1, resetAt });
+        return { allowed: true, remaining: GENERATE_DAILY_LIMIT - 1, resetAt: todayEnd };
+    }
+
+    if (entry.count >= GENERATE_DAILY_LIMIT) {
+        return { allowed: false, remaining: 0, resetAt: todayEnd };
+    }
+
+    entry.count++;
+    return { allowed: true, remaining: GENERATE_DAILY_LIMIT - entry.count, resetAt: todayEnd };
+}

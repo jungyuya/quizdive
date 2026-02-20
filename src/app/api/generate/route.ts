@@ -1,9 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateFlashcards } from '@/lib/gemini';
 import { generateLogger } from '@/lib/logger';
+import { checkGenerateLimit, getClientIP } from '@/lib/rate-limiter';
 
 export async function POST(req: NextRequest) {
     const timer = generateLogger.startTimer();
+
+    // Step 3.11.5: 서버 측 Rate Limit 체크
+    const clientIP = getClientIP(req);
+    const rateLimit = checkGenerateLimit(clientIP);
+
+    if (!rateLimit.allowed) {
+        return NextResponse.json(
+            { error: '오늘의 AI 생성 한도를 초과했습니다. 내일 다시 시도해주세요.' },
+            {
+                status: 429,
+                headers: {
+                    'X-RateLimit-Remaining': '0',
+                    'X-RateLimit-Reset': rateLimit.resetAt.toISOString(),
+                },
+            }
+        );
+    }
 
     try {
         const { text } = await req.json();

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FolderOpen, Plus, Trash2, ChevronRight, LogIn } from 'lucide-react';
+import { FolderOpen, Plus, Trash2, ChevronRight, LogIn, Share2, Link2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateDeckModal } from '@/components/CreateDeckModal';
 import { CardEditModal } from '@/components/CardEditModal';
@@ -11,6 +11,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { createDeck, getAllDecks, getDeckWithCards, deleteDeck, removeCardFromDeck } from '@/lib/supabase/decks';
 import { updateCardRemote } from '@/lib/supabase/cards';
 import { toast } from 'sonner';
+import { toggleDeckShare } from '@/lib/supabase/decks';
 import type { Deck, Flashcard } from '@/types';
 
 export default function CollectionsPage() {
@@ -21,6 +22,7 @@ export default function CollectionsPage() {
   const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
   const [deckCards, setDeckCards] = useState<Flashcard[]>([]);
   const [editingCard, setEditingCard] = useState<Flashcard | null>(null);
+  const [copiedDeckId, setCopiedDeckId] = useState<string | null>(null);
 
   const loadDecks = useCallback(async () => {
     if (!user) return;
@@ -217,12 +219,46 @@ export default function CollectionsPage() {
                     </div>
                     <div className="flex justify-between items-center mt-4 text-xs text-muted-foreground">
                       <span>{new Date(deck.createdAt).toLocaleDateString('ko-KR')}</span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteDeck(deck.id); }}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        {/* 공유 토글 버튼 */}
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const result = await toggleDeckShare(deck.id);
+                              if (result.shareUrl) {
+                                await navigator.clipboard.writeText(result.shareUrl);
+                                setCopiedDeckId(deck.id);
+                                setTimeout(() => setCopiedDeckId(null), 2000);
+                                toast.success('공유 링크가 복사되었습니다!');
+                              } else {
+                                toast.info('공유가 해제되었습니다.');
+                              }
+                              loadDecks();
+                            } catch (err: any) {
+                              console.error('공유 토글 실패:', err);
+                              toast.error(err.message || '공유 설정에 실패했습니다.');
+                            }
+                          }}
+                          className={`p-1 rounded transition-all ${copiedDeckId === deck.id
+                              ? 'text-emerald-500 bg-emerald-500/10'
+                              : 'hover:bg-primary/10 hover:text-primary'
+                            }`}
+                        >
+                          {copiedDeckId === deck.id ? (
+                            <Check className="w-4 h-4" />
+                          ) : (
+                            <Share2 className="w-4 h-4" />
+                          )}
+                        </button>
+                        {/* 삭제 버튼 */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteDeck(deck.id); }}
+                          className="p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 ))}
