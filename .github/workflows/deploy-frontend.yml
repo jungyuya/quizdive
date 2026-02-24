@@ -13,17 +13,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          cache: 'pnpm'
           
       - name: Install
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         
       - name: Build
-        run: npm run build
+        run: pnpm build
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
