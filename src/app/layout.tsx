@@ -20,7 +20,7 @@ export const metadata = {
   title: 'QuizDive - AI 플래시카드',
   description: '사진 한 장으로 AI 플래시카드 생성',
   // manifest: '/manifest.json', // PWA 잠시 숨김
-  themeColor: '#7C3AED',
+  themeColor: '#7f3eeeff',
   icons: {
     icon: '/favicon.png',
     shortcut: '/favicon.png',
