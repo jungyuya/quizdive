@@ -4,13 +4,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FolderOpen } from 'lucide-react'; // import 추가
-import { useMemo } from 'react'; // import 추가
+import { FolderOpen } from 'lucide-react';
+import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, BookOpen, GraduationCap, Moon, Sun, LogOut } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { PWAInstallButton } from './PWAInstallButton';
 
 
 
@@ -97,8 +98,11 @@ export function Navbar() {
             })}
           </div>
 
-          {/* 우측 영역: 다크모드 + 로그인 */}
+          {/* 우측 영역: PWA설치 + 다크모드 + 로그인 */}
           <div className="flex items-center gap-2">
+            {/* PWA 설치 버튼 (로그인 사용자만) */}
+            {user && <PWAInstallButton />}
+
             {/* 다크모드 토글 */}
             {mounted && (
               <button

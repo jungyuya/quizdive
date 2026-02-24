@@ -10,6 +10,7 @@ import { ManualCardForm } from '@/components/ManualCardForm';
 import { FileUploader } from '@/components/FileUploader';
 import { parseFile } from '@/lib/file-parser';
 import { chunkText } from '@/lib/text-chunker';
+import { useStreamCards } from '@/hooks/useStreamCards';
 import { toast } from 'sonner';
 import { ProcessingSteps } from '@/components/ProcessingSteps';
 import { FlashcardList } from '@/components/FlashcardList';
@@ -29,7 +30,7 @@ export default function HomePage() {
   const {
     step,
     processingSubStep,
-    cards,
+    cards: storeCards,
     error,
     setStep,
     setProcessingSubStep,
@@ -39,6 +40,9 @@ export default function HomePage() {
     setError,
     reset,
   } = useQuizStore();
+
+  const { cards: streamedCards, isStreaming, startStream } = useStreamCards();
+  const displayCards = isStreaming ? streamedCards : storeCards;
 
   // 상태 선언을 컴포넌트 상단으로 모음
   const [cropImage, setCropImage] = useState<string | null>(null);
@@ -66,7 +70,7 @@ export default function HomePage() {
       if (!uploadRes.ok) throw new Error(uploadData.error);
       setImageUrl(uploadData.imageUrl);
 
-      // 2단계: OCR (개선 — Base64 직접 전달)
+      // 2단계: OCR (개선 — Base64 직접 전달 복구)
       setProcessingSubStep('ocr');
 
       const imageBase64 = await fileToBase64(file);  // ✅ 방안 D: File → Base64
@@ -75,8 +79,8 @@ export default function HomePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          imageUrl: uploadData.imageUrl, // 하위 호환용 (fallback)
-          imageBase64,                    // ✅ 새로 추가: 직접 전달
+          imageUrl: uploadData.imageUrl, // 하위 호환용
+          imageBase64,                   // ✅ 복구: 직접 전달하여 서버 COS 다운로드 생략
         }),
       });
 
@@ -100,29 +104,13 @@ export default function HomePage() {
       if (!ocrRes.ok) throw new Error(ocrData.error);
       setOcrText(ocrData.text);
 
-      // 3단계: AI 생성
+      // 3단계: AI 생성 (스트리밍 적용)
       setProcessingSubStep('generating');
-      const genRes = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: ocrData.text }),
-      });
-      const genData = await genRes.json();
-      if (!genRes.ok) throw new Error(genData.error);
 
-      // 카드 생성 및 저장
-      const newCards = genData.cards.map(
-        (c: { question: string; answer: string }) => ({
-          id: uuidv4(),
-          question: c.question,
-          answer: c.answer,
-          createdAt: new Date(),
-          reviewCount: 0,
-        })
-      );
+      const streamCards = await startStream(ocrData.text);
 
-      setCards(newCards);
-      await cardService.save(newCards);
+      setCards(streamCards);
+      await cardService.save(streamCards);
 
       setStep('complete');
       setProcessingSubStep(null);
@@ -380,6 +368,20 @@ export default function HomePage() {
                 mode={inputMode === 'file' ? 'file' : 'image'}
                 chunkProgress={chunkProgress}
               />
+
+              {/* ✅ Step 4.4: 스트리밍 중 실시간 카드 표시 */}
+              {isStreaming && streamedCards.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 space-y-4"
+                >
+                  <p className="text-sm text-muted-foreground">
+                    🃏 생성 중... ({streamedCards.length}장)
+                  </p>
+                  <FlashcardList cards={streamedCards} />
+                </motion.div>
+              )}
             </motion.div>
           )}
 
@@ -393,13 +395,13 @@ export default function HomePage() {
             >
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-semibold">
-                  생성된 카드 ({cards.length}개)
+                  생성된 카드 ({displayCards.length}개)
                 </h2>
                 <Button onClick={reset} variant="outline">
                   새로 만들기
                 </Button>
               </div>
-              <FlashcardList cards={cards} />
+              <FlashcardList cards={displayCards} />
             </motion.div>
           )}
         </AnimatePresence>

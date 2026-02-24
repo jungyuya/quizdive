@@ -28,9 +28,13 @@ export function FlashcardList({ cards, onDelete, onEdit }: FlashcardListProps) {
       {cards.map((card, index) => (
         <motion.div
           key={card.id}
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.1 }}
+          transition={{
+            delay: index * 0.15,            // ✅ Step 4: 0.1 → 0.15초 (8장 기준 1.2초에 걸쳐 순차 표시)
+            duration: 0.4,                   // 등장 애니메이션 0.4초
+            ease: [0.25, 0.1, 0.25, 1.0],   // ease-out 곡선
+          }}
         >
           <FlashcardItem card={card} onDelete={onDelete} onEdit={onEdit} />
         </motion.div>
