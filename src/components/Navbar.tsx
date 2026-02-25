@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -18,7 +18,6 @@ import { PWAInstallButton } from './PWAInstallButton';
 export function Navbar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const { user, loading, signInWithGoogle, signOut } = useAuth();
@@ -38,10 +37,12 @@ export function Navbar() {
     return base;
   }, [user]);
 
-  // hydration 불일치 방지
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // hydration 불일치 방지 (useSyncExternalStore 패턴으로 set-state-in-effect 회피)
+  const mounted = useSyncExternalStore(
+    () => () => { },
+    () => true,
+    () => false,
+  );
 
   // 프로필 메뉴 외부 클릭 감지
   useEffect(() => {
@@ -98,10 +99,8 @@ export function Navbar() {
             })}
           </div>
 
-          {/* 우측 영역: PWA설치 + 다크모드 + 로그인 */}
+          {/* 우측 영역: 다크모드 + 로그인 */}
           <div className="flex items-center gap-2">
-            {/* PWA 설치 버튼 (로그인 사용자만) */}
-            {user && <PWAInstallButton />}
 
             {/* 다크모드 토글 */}
             {mounted && (
@@ -126,10 +125,13 @@ export function Navbar() {
                     onClick={() => setShowProfileMenu(!showProfileMenu)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-muted transition-colors"
                   >
-                    <img
+                    <Image
                       src={user.user_metadata.avatar_url}
                       alt="프로필"
+                      width={28}
+                      height={28}
                       className="w-7 h-7 rounded-full"
+                      unoptimized
                     />
                     <span className="text-sm hidden lg:inline">
                       {user.user_metadata.name}
@@ -151,6 +153,7 @@ export function Navbar() {
                           <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                         </div>
                         <div className="p-1">
+                          <PWAInstallButton />
                           <button
                             onClick={() => {
                               setShowProfileMenu(false);

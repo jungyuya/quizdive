@@ -11,20 +11,19 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function PWAInstallButton() {
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-    const [isInstalled, setIsInstalled] = useState(false);
+    // standalone 모드 감지를 초기 상태로 처리 (set-state-in-effect 회피)
+    const [isInstalled, setIsInstalled] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return window.matchMedia('(display-mode: standalone)').matches;
+    });
 
     useEffect(() => {
-        // ① 설치 프롬프트 이벤트 캡처 (자동 배너 억제)
+        // 설치 프롬프트 이벤트 캡처 (자동 배너 억제)
         const handler = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e as BeforeInstallPromptEvent);
         };
         window.addEventListener('beforeinstallprompt', handler);
-
-        // ② 이미 설치된 경우 감지 (standalone 모드)
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            setIsInstalled(true);
-        }
 
         return () => window.removeEventListener('beforeinstallprompt', handler);
     }, []);
@@ -45,11 +44,11 @@ export function PWAInstallButton() {
     return (
         <button
             onClick={handleInstall}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
             aria-label="앱 설치"
         >
             <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">앱 설치</span>
+            앱 설치
         </button>
     );
 }

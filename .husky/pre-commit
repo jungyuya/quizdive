@@ -1,0 +1,23 @@
+#!/bin/sh
+
+echo "🔍 Pre-commit 검사 실행 중..."
+
+# 1. 시크릿 키 패턴 검사
+echo "  → 시크릿 키 패턴 검사..."
+SECRETS_FOUND=$(grep -rn "AKID\|AIzaSy\|sk-\|supabase.*key.*=.*ey" \
+  --include="*.ts" --include="*.tsx" --include="*.js" \
+  src/ 2>/dev/null | grep -v "process\.env\|secrets\.\|\.example\|\.d\.ts\|// " || true)
+
+if [ -n "$SECRETS_FOUND" ]; then
+  echo "⚠️  시크릿 키가 코드에 포함되어 있습니다!"
+  echo "$SECRETS_FOUND"
+  exit 1
+fi
+
+echo "  ✅ 시크릿 키 없음"
+
+# 2. ESLint 검사 (스테이징된 파일만)
+echo "  → ESLint 검사 (lint-staged)..."
+npx lint-staged
+
+echo "✅ 모든 검사 통과!"

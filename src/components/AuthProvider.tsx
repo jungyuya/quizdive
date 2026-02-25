@@ -49,8 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Google OAuth 리다이렉트 후 페이지가 새로 로드되면 여기서 유저를 발견함
         supabase.auth.getUser().then(async ({ data: { user: initialUser } }) => {
             if (initialUser) {
-                // 마이그레이션을 setUser 전에 실행 (race condition 방지)
-                await tryMigrate(initialUser);
+                // 마이그레이션을 백그라운드에서 실행 (로그인 딜레이 방지)
+                tryMigrate(initialUser);
             }
             setUser(initialUser);
             setLoading(false);
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // SIGNED_IN: 같은 탭에서 로그인 완료 시 (OAuth 리다이렉트가 아닌 경우)
             // INITIAL_SESSION: 페이지 새로 로드 시 기존 세션 복원
             if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-                await tryMigrate(session.user);
+                tryMigrate(session.user);
             }
 
             setUser(session?.user ?? null);
@@ -69,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         return () => subscription.unsubscribe();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase는 createClient()의 안정적 참조
     }, []);
 
     const signInWithGoogle = async () => {
